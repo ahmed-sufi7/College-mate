@@ -29,6 +29,7 @@
       padding: 10px;
       box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
       min-width: 260px;
+      max-width: 90vw;
     }
 
     .btn {
@@ -38,7 +39,8 @@
       border-radius: 6px;
       border: 0;
       cursor: pointer;
-      font-size: 13px
+      font-size: 13px;
+      white-space: nowrap;
     }
 
     .btn.primary {
@@ -51,12 +53,20 @@
       color: #222
     }
 
+    .floor-buttons {
+      display: flex;
+      gap: 6px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
     input[type="search"] {
       width: 100%;
       padding: 7px;
       border-radius: 6px;
       border: 1px solid #ddd;
-      margin-top: 8px
+      margin-top: 8px;
+      box-sizing: border-box;
     }
 
     #results {
@@ -95,24 +105,182 @@
       border-radius: 3px;
       display: inline-block
     }
+
+    .navigate-btn {
+      background: #28a745;
+      color: white;
+      border: none;
+      padding: 4px 8px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 11px;
+      margin-left: 8px;
+    }
+
+    .navigate-btn:hover {
+      background: #218838;
+    }
+
+    .collapse-toggle {
+      background: #6c757d;
+      color: white;
+      border: none;
+      padding: 6px 10px;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      width: 100%;
+      margin-top: 8px;
+      text-align: center;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .collapse-toggle:hover {
+      background: #5a6268;
+    }
+
+    .collapsible-section {
+      overflow: hidden;
+      transition: max-height 0.3s ease-out, opacity 0.3s ease-out;
+    }
+
+    .collapsible-section.collapsed {
+      max-height: 0 !important;
+      opacity: 0;
+      margin: 0;
+      padding: 0;
+    }
+
+    .arrow {
+      transition: transform 0.3s ease;
+      font-size: 14px;
+    }
+
+    .arrow.rotated {
+      transform: rotate(180deg);
+    }
+
+    /* Mobile Responsive Styles */
+    @media (max-width: 768px) {
+      #controls {
+        left: 8px;
+        top: 8px;
+        right: 8px;
+        padding: 8px;
+        min-width: auto;
+        max-width: none;
+      }
+
+      .floor-buttons {
+        justify-content: space-between;
+      }
+
+      .btn {
+        padding: 10px 8px;
+        margin: 2px;
+        font-size: 11px;
+        flex: 1;
+        min-width: 0;
+      }
+
+      input[type="search"] {
+        padding: 10px;
+        font-size: 14px;
+      }
+
+      #results {
+        max-height: 150px;
+        font-size: 13px;
+      }
+
+      .result {
+        padding: 10px 8px;
+      }
+
+      #legend {
+        font-size: 11px;
+      }
+
+      #legend .row {
+        gap: 6px;
+        margin: 4px 0;
+      }
+
+      .navigate-btn {
+        padding: 6px 10px;
+        font-size: 10px;
+        margin-left: 4px;
+      }
+    }
+
+    @media (max-width: 480px) {
+      #controls {
+        left: 4px;
+        top: 4px;
+        right: 4px;
+        padding: 6px;
+      }
+
+      .btn {
+        padding: 8px 4px;
+        font-size: 10px;
+      }
+
+      input[type="search"] {
+        padding: 8px;
+        font-size: 13px;
+        margin-top: 6px;
+      }
+
+      #results {
+        max-height: 120px;
+        font-size: 12px;
+      }
+
+      .result {
+        padding: 8px 6px;
+        margin: 4px 0;
+      }
+
+      #legend {
+        font-size: 10px;
+        margin-top: 6px;
+      }
+
+      .sw {
+        width: 14px;
+        height: 10px;
+      }
+
+      .navigate-btn {
+        padding: 5px 8px;
+        font-size: 9px;
+      }
+    }
   </style>
 </head>
 
 <body>
   <div id="controls">
-    <div style="display:flex;gap:6px;align-items:center">
+    <div class="floor-buttons">
       <button id="btnF1" class="btn primary">Floor 1</button>
-      <button id="btnF2" class="btn ghost">Floor 2</button>
+      <button id="btnF2" class="btn" style="background:#33a02c;color:#fff">Floor 2</button>
       <button id="btnBoth" class="btn" style="background:#20c997;color:#fff">Show Both</button>
     </div>
 
-    <input id="search" type="search" placeholder="Search rooms / points (e.g. LH-15, Cloud Computing)" />
+    <button id="btnLocation" class="btn" style="background:#007bff;color:#fff;width:100%;margin-top:8px">📍 Get My
+      Location</button>
 
-    <div id="results"></div>
+    <button class="collapse-toggle" id="toggleSearch">
+      <span>🔍 Search</span>
+      <span class="arrow">▼</span>
+    </button>
 
-    <div id="legend">
-      <div class="row"><span class="sw" style="background:#1f78b4"></span> Floor 1 (0 → 5 m)</div>
-      <div class="row"><span class="sw" style="background:#33a02c"></span> Floor 2 (5 → 10 m)</div>
+    <div class="collapsible-section" id="searchSection">
+      <input id="search" type="search" placeholder="Search rooms / points (e.g. LH-15, Cloud Computing)" />
+      <div id="results"></div>
     </div>
   </div>
 
@@ -191,6 +359,164 @@
         out.features.push(clone);
       });
       return out;
+    }
+
+    // -----------------------------
+    // Navigation & User Location
+    // -----------------------------
+    let userLocationMarker = null;
+    let userLocation = null;
+    let navigationRoute = null;
+    let watchId = null;
+
+    // Simple routing: draw a line from user location to destination
+    function createRoute(from, to) {
+      return {
+        type: 'Feature',
+        geometry: {
+          type: 'LineString',
+          coordinates: [from, to]
+        },
+        properties: {}
+      };
+    }
+
+    function startNavigation(destinationCoords, destinationName) {
+      if (!userLocation) {
+        alert('Please get your location first by clicking "📍 Get My Location"');
+        return;
+      }
+
+      const mapInstance = window._MAP_INSTANCE;
+      if (!mapInstance) return;
+
+      // Create navigation route
+      navigationRoute = createRoute(userLocation, destinationCoords);
+
+      // Add or update navigation route layer
+      if (mapInstance.getSource('navigation-route')) {
+        mapInstance.getSource('navigation-route').setData(navigationRoute);
+      } else {
+        mapInstance.addSource('navigation-route', {
+          type: 'geojson',
+          data: navigationRoute
+        });
+
+        mapInstance.addLayer({
+          id: 'navigation-route',
+          type: 'line',
+          source: 'navigation-route',
+          paint: {
+            'line-color': '#FF0000',
+            'line-width': 4,
+            'line-opacity': 0.8
+          }
+        });
+      }
+
+      // Fly to show the route
+      const bounds = [
+        [Math.min(userLocation[0], destinationCoords[0]), Math.min(userLocation[1], destinationCoords[1])],
+        [Math.max(userLocation[0], destinationCoords[0]), Math.max(userLocation[1], destinationCoords[1])]
+      ];
+      mapInstance.fitBounds(bounds, { padding: 100, duration: 1000 });
+
+      // Show navigation popup
+      new maplibregl.Popup({ closeButton: true })
+        .setLngLat(destinationCoords)
+        .setHTML(`<b>Navigation to ${destinationName}</b><br>Follow the red line`)
+        .addTo(mapInstance);
+    }
+
+    function clearNavigation() {
+      const mapInstance = window._MAP_INSTANCE;
+      if (!mapInstance) return;
+
+      if (mapInstance.getSource('navigation-route')) {
+        mapInstance.getSource('navigation-route').setData({
+          type: 'FeatureCollection',
+          features: []
+        });
+      }
+    }
+
+    function updateUserLocation(position) {
+      const { latitude, longitude, accuracy } = position.coords;
+      userLocation = [longitude, latitude];
+
+      const mapInstance = window._MAP_INSTANCE;
+      if (!mapInstance) return;
+
+      // Remove previous marker
+      if (userLocationMarker) {
+        userLocationMarker.remove();
+      }
+
+      // Create user location marker
+      const el = document.createElement('div');
+      el.style.cssText = 'width: 20px; height: 20px; background: #4285F4; border: 3px solid white; border-radius: 50%; box-shadow: 0 2px 6px rgba(0,0,0,0.3);';
+
+      userLocationMarker = new maplibregl.Marker({ element: el })
+        .setLngLat([longitude, latitude])
+        .addTo(mapInstance);
+
+      // Fly to user location
+      mapInstance.flyTo({
+        center: [longitude, latitude],
+        zoom: 19,
+        duration: 1000
+      });
+
+      // Show location info
+      new maplibregl.Popup({ offset: [0, -15], closeButton: false })
+        .setLngLat([longitude, latitude])
+        .setHTML(`<b>Your Location</b><br>Accuracy: ±${Math.round(accuracy)}m`)
+        .addTo(mapInstance);
+    }
+
+    function getUserLocation() {
+      if (!navigator.geolocation) {
+        alert('Geolocation is not supported by your browser');
+        return;
+      }
+
+      const btn = document.getElementById('btnLocation');
+      btn.disabled = true;
+      btn.textContent = '⏳ Getting location...';
+
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          updateUserLocation(position);
+          btn.disabled = false;
+          btn.textContent = '📍 Location Active';
+          btn.style.background = '#28a745';
+
+          // Watch for position updates
+          if (watchId) {
+            navigator.geolocation.clearWatch(watchId);
+          }
+          watchId = navigator.geolocation.watchPosition(updateUserLocation, null, {
+            enableHighAccuracy: true,
+            maximumAge: 5000
+          });
+        },
+        (error) => {
+          btn.disabled = false;
+          btn.textContent = '📍 Get My Location';
+          btn.style.background = '#007bff';
+
+          let errorMsg = 'Unable to get your location';
+          if (error.code === error.PERMISSION_DENIED) {
+            errorMsg = 'Location permission denied. Please enable location access.';
+          } else if (error.code === error.POSITION_UNAVAILABLE) {
+            errorMsg = 'Location information unavailable.';
+          } else if (error.code === error.TIMEOUT) {
+            errorMsg = 'Location request timed out.';
+          }
+          alert(errorMsg);
+        },
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+      );
     }
 
     // -----------------------------
@@ -435,11 +761,33 @@
     function addResultItem(title, coords, snippet, featureGeometry, featureProps) {
       const d = document.createElement('div');
       d.className = 'result';
-      d.innerHTML = '<strong>' + title + '</strong>' + (snippet ? '<div style="color:#555;font-size:12px;margin-top:4px;">' + snippet + '</div>' : '');
+
+      const contentDiv = document.createElement('div');
+      contentDiv.style.display = 'flex';
+      contentDiv.style.justifyContent = 'space-between';
+      contentDiv.style.alignItems = 'center';
+
+      const textDiv = document.createElement('div');
+      textDiv.innerHTML = '<strong>' + title + '</strong>' + (snippet ? '<div style="color:#555;font-size:12px;margin-top:4px;">' + snippet + '</div>' : '');
+
+      const navBtn = document.createElement('button');
+      navBtn.className = 'navigate-btn';
+      navBtn.textContent = '🧭 Navigate';
+      navBtn.onclick = (e) => {
+        e.stopPropagation();
+        clearNavigation();
+        startNavigation(coords, title);
+      };
+
+      contentDiv.appendChild(textDiv);
+      contentDiv.appendChild(navBtn);
+      d.appendChild(contentDiv);
+
       d.onclick = () => {
         const mapInstance = window._MAP_INSTANCE;
         if (!mapInstance) return;
 
+        clearNavigation();
         mapInstance.flyTo({ center: coords, zoom: 19, duration: 800 });
         new maplibregl.Popup({ offset: [0, -12] }).setLngLat(coords).setHTML('<b>' + title + '</b>' + (snippet ? '<br>' + snippet : '')).addTo(mapInstance);
 
@@ -504,6 +852,46 @@
       if (debounceTimer) clearTimeout(debounceTimer);
       debounceTimer = setTimeout(() => searchQuery(v), 200);
     });
+
+    // Location button event listener
+    document.getElementById('btnLocation').addEventListener('click', getUserLocation);
+
+    // Collapsible sections functionality
+    function setupCollapsible(toggleId, sectionId) {
+      const toggle = document.getElementById(toggleId);
+      const section = document.getElementById(sectionId);
+      const arrow = toggle.querySelector('.arrow');
+
+      // Set initial max-height for smooth animation
+      section.style.maxHeight = section.scrollHeight + 'px';
+
+      toggle.addEventListener('click', () => {
+        const isCollapsed = section.classList.contains('collapsed');
+
+        if (isCollapsed) {
+          section.classList.remove('collapsed');
+          section.style.maxHeight = section.scrollHeight + 'px';
+          arrow.classList.remove('rotated');
+        } else {
+          section.style.maxHeight = section.scrollHeight + 'px';
+          // Force reflow
+          section.offsetHeight;
+          section.classList.add('collapsed');
+          arrow.classList.add('rotated');
+        }
+      });
+
+      // Update max-height when content changes
+      const observer = new MutationObserver(() => {
+        if (!section.classList.contains('collapsed')) {
+          section.style.maxHeight = section.scrollHeight + 'px';
+        }
+      });
+
+      observer.observe(section, { childList: true, subtree: true });
+    }
+
+    setupCollapsible('toggleSearch', 'searchSection');
 
   </script>
 </body>
