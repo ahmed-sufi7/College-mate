@@ -156,7 +156,7 @@
     }
 
     // make a point feature for each polygon (for labels & flyTo)
-    function polygonCentroidPoints(fc, nameProp = 'name') {
+    function polygonCentroidPoints(fc, nameProp = 'name', altitudeOffset = 0) {
       const pts = { type: 'FeatureCollection', features: [] };
       fc.features.forEach((f, idx) => {
         if (!f.geometry) return;
@@ -166,7 +166,7 @@
         pts.features.push({
           type: 'Feature',
           geometry: { type: 'Point', coordinates: c },
-          properties: { label, source_index: idx, original_props: f.properties || {} }
+          properties: { label, source_index: idx, original_props: f.properties || {}, altitude: altitudeOffset }
         });
       });
       return pts;
@@ -226,8 +226,8 @@
         const floor2Polys = prepareFloorPolys(FLOOR2, 2);
 
         // polygon centroids for labels
-        const floor1Points = polygonCentroidPoints(floor1Polys);
-        const floor2Points = polygonCentroidPoints(floor2Polys);
+        const floor1Points = polygonCentroidPoints(floor1Polys, 'name', 0);
+        const floor2Points = polygonCentroidPoints(floor2Polys, 'name', 5);
 
         // add sources
         map.addSource('map-points', { type: 'geojson', data: MAP }); // raw points + lines
@@ -291,9 +291,20 @@
           id: 'floor2-labels',
           type: 'symbol',
           source: 'floor2-points',
-          layout: { 'text-field': ['coalesce', ['get', 'label'], ''], 'text-size': 12, 'text-anchor': 'top', 'text-offset': [0, 1.0] },
-          paint: { 'text-color': '#fff', 'text-halo-color': '#000', 'text-halo-width': 1 },
-          layout: { visibility: 'none' } // ensure labels hidden with floor
+          layout: {
+            'text-field': ['coalesce', ['get', 'label'], ''],
+            'text-size': 12,
+            'text-anchor': 'top',
+            'text-offset': [0, 1.0],
+            'visibility': 'none',
+            'symbol-z-order': 'auto'
+          },
+          paint: {
+            'text-color': '#fff',
+            'text-halo-color': '#000',
+            'text-halo-width': 1,
+            'text-translate': [0, -100]
+          }
         });
 
         // points from MAP (original loose POIs)
@@ -380,6 +391,7 @@
 
         // expose for search
         window._MAP_GEO = { mapPoints: MAP, floor1Polys, floor2Polys, floor1Points, floor2Points };
+        window._MAP_INSTANCE = map; // expose map instance for search highlight
 
       }); // map.on('load')
 
@@ -420,13 +432,36 @@
 
     function clearResults() { resultsDiv.innerHTML = ''; }
 
-    function addResultItem(title, coords, snippet) {
+    function addResultItem(title, coords, snippet, featureGeometry, featureProps) {
       const d = document.createElement('div');
       d.className = 'result';
       d.innerHTML = '<strong>' + title + '</strong>' + (snippet ? '<div style="color:#555;font-size:12px;margin-top:4px;">' + snippet + '</div>' : '');
       d.onclick = () => {
-        map.flyTo({ center: coords, zoom: 19, duration: 800 });
-        new maplibregl.Popup({ offset: [0, -12] }).setLngLat(coords).setHTML('<b>' + title + '</b>' + (snippet ? '<br>' + snippet : '')).addTo(map);
+        const mapInstance = window._MAP_INSTANCE;
+        if (!mapInstance) return;
+
+        mapInstance.flyTo({ center: coords, zoom: 19, duration: 800 });
+        new maplibregl.Popup({ offset: [0, -12] }).setLngLat(coords).setHTML('<b>' + title + '</b>' + (snippet ? '<br>' + snippet : '')).addTo(mapInstance);
+
+        // Highlight the block if it's a polygon feature
+        if (featureGeometry && featureGeometry.type === 'Polygon' && featureProps) {
+          const highlightFeature = {
+            type: 'Feature',
+            geometry: featureGeometry,
+            properties: {
+              height: featureProps.height || 5,
+              base: featureProps.base || 0
+            }
+          };
+          mapInstance.getSource('hover-highlight').setData({ type: 'FeatureCollection', features: [highlightFeature] });
+
+          // Clear highlight after 3 seconds
+          setTimeout(() => {
+            if (mapInstance.getSource('hover-highlight')) {
+              mapInstance.getSource('hover-highlight').setData({ type: 'FeatureCollection', features: [] });
+            }
+          }, 3000);
+        }
       };
       resultsDiv.appendChild(d);
     }
@@ -453,7 +488,7 @@
           const name = (f.properties && (f.properties.name || f.properties.label)) || '';
           if (name && name.toLowerCase().indexOf(q) !== -1) {
             const c = centroidOfPolygon(f.geometry.coordinates);
-            addResultItem(name, c, 'Floor: ' + (f.properties.floor || (sourceKey === 'floor2Polys' ? 2 : 1)));
+            addResultItem(name, c, 'Floor: ' + (f.properties.floor || (sourceKey === 'floor2Polys' ? 2 : 1)), f.geometry, f.properties);
           }
         });
       });
