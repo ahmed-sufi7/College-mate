@@ -309,9 +309,14 @@
         map.addSource('hover-highlight', { type: 'geojson', data: { type: 'FeatureCollection', features: [] } });
         map.addLayer({
           id: 'hover-highlight-fill',
-          type: 'line',
+          type: 'fill-extrusion',
           source: 'hover-highlight',
-          paint: { 'line-color': '#ff0000', 'line-width': 3 }
+          paint: {
+            'fill-extrusion-color': '#ff0000',
+            'fill-extrusion-height': ['get', 'height'],
+            'fill-extrusion-base': ['get', 'base'],
+            'fill-extrusion-opacity': 0.6
+          }
         });
 
         // bind interactivity: clicking on extrusions shows popup
@@ -337,7 +342,7 @@
             .addTo(map);
 
           // highlight polygon boundary briefly
-          const geom = (f.layer.id === 'map-poi-points') ? null : { type: 'Feature', geometry: f.geometry, properties: {} };
+          const geom = (f.layer.id === 'map-poi-points') ? null : { type: 'Feature', geometry: f.geometry, properties: { height: f.properties.height, base: f.properties.base } };
           if (geom) {
             map.getSource('hover-highlight').setData({ type: 'FeatureCollection', features: [geom] });
             // clear after 3s
